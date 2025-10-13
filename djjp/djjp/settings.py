@@ -123,7 +123,7 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# DJJP = {
-#     "concurrency": "threads",
-#     "concurrency_limit": 50,
-# }
+DJJP = {
+    "concurrency": "threads",
+    "concurrency_limit": 50,
+}
