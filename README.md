@@ -15,6 +15,10 @@ Coming soon:
 - Dedicated db as job queue (using Django's multi db support)
 - HTTP interface for the job queue
 - Scheduled jobs
+- Remove `rich` package dependency
+- Remove `djclick` package dependency
+
+The project's Kanban board is [here](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
 
 ## Setup
 
@@ -45,6 +49,7 @@ Configuration is optional. In your Django `settings` module:
 DJJP = {
     "concurrency": "threads",  # ['threads', 'asyncio'] are valid values, `asyncio` not implemented yet
     "concurrency_limit": 10,  # how many jobs to run concurrently per process
+    "db_name": "default",
 }
 ```
 
@@ -65,10 +70,24 @@ def func(a, b):
 
 ### Run the Consumer
 
-The consumer is a Django management command:
+Create a [new Django management command](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/#module-django.core.management). Load your jobs modules and call the `start_consumer` command. In the below example I'm creating a command called `run_consumer` in `run_consumer.py`:
+
+```python
+from django.core.management.base import BaseCommand
+from django.core.management import call_command
+
+from blah.jobs import job1  # import job functions so they get registered
+
+
+class Command(BaseCommand):
+    def handle(self, *args, **options):
+        call_command("start_consumer")
+```
+
+Then, run the command you just created:
 
 ```bash
-python manage.py start_consumer
+python manage.py run_consumer
 ```
 
 ### async Jobs
@@ -88,8 +107,6 @@ For advanced users, note the following scenarios can occur:
 In such cases, `sync_to_async` and `async_to_sync` functions of the `asgi` package are used to resolve the mismatch by changing the flavor of the function. If you're using `async` jobs to improve performance you want to pay attention to such mismatches.
 
 ### Choosing the Database Engine
-
-The job queue uses your Django settings' "default" database.
 
 If the load on this db is too high and you want to offload the job queue traffic to another database, then either create a PR or wait a bit until this feature is added.
 

@@ -5,10 +5,8 @@ from django.conf import settings
 from rich import print
 import concurrent.futures
 
-from que.models import JobDBModel
-from que.jobs import lock_new_job_for_running, run_job
-
-from blah.js import func  # DO NOT remove, this registers job!
+from django_async_job_pipelines.models import JobDBModel
+from django_async_job_pipelines.jobs import lock_new_job_for_running, run_job
 
 
 @click.command()
