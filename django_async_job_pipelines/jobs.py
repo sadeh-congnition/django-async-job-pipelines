@@ -1,4 +1,5 @@
 from typing import Tuple
+from contextvars import ContextVar
 from asgiref.sync import async_to_sync
 import inspect
 from dataclasses import dataclass
@@ -6,7 +7,10 @@ from django.db.utils import IntegrityError
 import traceback
 from typing import Callable
 
-from .models import JobDBModel, LockedJob
+from django_async_job_pipelines.models import JobDBModel, LockedJob
+from django_async_job_pipelines.db_layer import db
+
+djjp_currently_running_job = ContextVar("djjp_currently_running_job")
 
 
 @dataclass
@@ -22,7 +26,7 @@ class Job:
             self.func_to_run(*args, **kwargs)
 
     def run_later(self, *args, **kwargs):
-        return JobDBModel.make_new(self.name, *args, **kwargs)
+        return db.run_later(*args, job_name=self.name, **kwargs)
 
 
 @dataclass
@@ -64,7 +68,8 @@ def job(*args, **kwargs):
 
 
 def run_job(job: JobDBModel, lock: LockedJob | None = None):
-    job.mark_as_in_progress()
+    djjp_currently_running_job.set(job)
+    db.mark_as_in_progress(job)
 
     try:
         j = job_registry.find_job(job.name)
@@ -79,17 +84,17 @@ def run_job(job: JobDBModel, lock: LockedJob | None = None):
         j(*args, **kwargs)
 
     except Exception:
-        job.mark_as_error(traceback.format_exc())
+        db.mark_as_error(job, traceback.format_exc())
     else:
-        job.mark_as_done()
+        db.mark_as_done(job)
     finally:
         if lock:
-            lock.delete()
+            db.delete_lock(lock)
 
 
 def lock_new_job_for_running() -> Tuple[JobDBModel | None, LockedJob | None]:
     try:
-        job, lock = JobDBModel.lock_one()
+        job, lock = db.lock_one()
         return job, lock
     except IntegrityError:
         return None, None

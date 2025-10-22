@@ -1,4 +1,4 @@
-# djjp
+# djjp - django-async-job-pipelines
 
 The simplest job queue ever:
 
@@ -7,6 +7,7 @@ The simplest job queue ever:
 - Run multiple consumers as separate processes
 - Configure concurrency - via multithreading - for each consumer
 - Monitor jobs via a Django admin page
+- Easily debug failed job using their exception stacktrace
 
 Coming soon:
 
@@ -20,13 +21,21 @@ Coming soon:
 
 The project's Kanban board is [here](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
 
-## Setup
+Documentation is [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki).
 
-### Install the Package
+## How to Use
 
-pypi package coming soon...
+### Install
 
-### Add to Django Apps
+```bash
+pip install https://github.com/sadeh-congnition/django-async-job-pipelines.git
+```
+
+`pypi` package coming soon...
+
+### Setup
+
+Add `django_async_job_pipelines` to `Django` installed apps in your `settings.py`:
 
 ```Python
 INSTALLED_APPS = [
@@ -35,7 +44,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-### Run Database Migrations
+Run Database Migrations:
 
 ```bash
 python manage.py migrate
@@ -53,20 +62,19 @@ DJJP = {
 }
 ```
 
-The above is the default configuration.
-
 ### Create Background Jobs
 
 ```python
-
 from django_async_job_pipelines.jobs import job
 
 @job(name="name")  # Job names must be unique
-def func(a, b):
+def job1(a, b):
     """
     function implementation
     """
 ```
+
+You can change the implementation of the `job1` function even after you've pushed jobs to the queue. When the consumer runs it'll use the new implementation. If you change the function signature the job will fail.
 
 ### Run the Consumer
 
@@ -90,35 +98,13 @@ Then, run the command you just created:
 python manage.py run_consumer
 ```
 
-### async Jobs
-
-`async` and regular jobs and mixing them is supported.
-
-However, depending on the type of concurrency you've configured this app with
-
-- If the majority of your jobs are `async` then use the `asyncio` concurrency type. (coming soon!)
-- Otherwise use the 'threads' concurrency type.
-
-For advanced users, note the following scenarios can occur:
-
-- Concurrency type is `asyncio` but the job is a regular Python function
-- Concurrency type is `threads` but the job is an `async` function
-
-In such cases, `sync_to_async` and `async_to_sync` functions of the `asgi` package are used to resolve the mismatch by changing the flavor of the function. If you're using `async` jobs to improve performance you want to pay attention to such mismatches.
-
-### Choosing the Database Engine
-
-If the load on this db is too high and you want to offload the job queue traffic to another database, then either create a PR or wait a bit until this feature is added.
-
-By default, Django uses sqlite3 as db. When using this option keep in mind that sqlite3 data is in one file. It's your responsibility to ensure this file is backed up and things like server restarts don't lead to loss of all data in that file.
-
 ## Benchmark
 
-Setup: Mac mini 2025, M4, Python 3.13.5
+Setup: Mac mini 2025 with M4 chip, Python 3.13.5
 
-Task: time.sleep between 0.01 to 0.1 seconds.
+Task: `time.sleep` between 0.01 to 0.1 seconds.
 
-## Creating/Consuming Jobs One by One
+### Creating/Consuming Jobs One by One
 
 | No. of Jobs | Creation | Consumption | No. Threads | No. `asyncio` Tasks | DB Engine |
 | ----------- | -------- | ----------- | ----------- | ----------------- | ------ |
