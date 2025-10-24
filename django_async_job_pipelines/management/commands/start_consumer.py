@@ -5,7 +5,7 @@ from django.conf import settings
 from rich import print
 import concurrent.futures
 
-from django_async_job_pipelines.models import JobDBModel
+from django_async_job_pipelines.db_layer import db
 from django_async_job_pipelines.jobs import lock_new_job_for_running, run_job
 
 
@@ -22,6 +22,9 @@ def command():
 
         if concurrency_type == "threads":
             run_threads(int(concurrency_limit))
+        else:
+            raise NotImplementedError("asyncio concurrency not implemented yet!")
+
     except AttributeError:
         run_default()
 
@@ -41,15 +44,15 @@ def run_threads(max_threads: int):
 
 
 def run_default():
-    speel_choices = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+    sleep_choices = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     while True:
         job, lock = lock_new_job_for_running()
 
         if not job:
-            choice = random.choice(speel_choices)
+            choice = random.choice(sleep_choices)
             sleep(choice)
             print("[cyan]Going to sleep:[/cyan]", choice)
-            if not JobDBModel.objects.filter(status=JobDBModel.Status.NEW).exists():
+            if not db.new_job_exists():
                 break
             continue
 
