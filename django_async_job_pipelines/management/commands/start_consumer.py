@@ -1,4 +1,5 @@
 import djclick as click
+import traceback
 import random
 from time import sleep
 from django.conf import settings
@@ -11,6 +12,7 @@ from django_async_job_pipelines.jobs import lock_new_job_for_running, run_job
 
 @click.command()
 def command():
+    # TODO define default configs here!
     try:
         conf = settings.DJJP
         concurrency_type = conf.get("concurrency", "threads")
@@ -26,16 +28,21 @@ def command():
             raise NotImplementedError("asyncio concurrency not implemented yet!")
 
     except AttributeError:
-        run_default()
+        run_default()  # TODO: Fix this, it should run with default configs
 
 
 def run_threads(max_threads: int):
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-        futures = {executor.submit(run_default): i for i in range(max_threads)}
+        futures = {executor.submit(run_default, i): i for i in range(max_threads)}
+        # TODO: create another thread here that monitors if exist event is settings
+        # if exist event is set this threat should stop all threads
+        # and then reset all jobs to NEW status and delete the locks for all
+        # in-progress jobs
         for f in concurrent.futures.as_completed(futures):
             try:
                 f.result()
-            except Exception as e:
+            except Exception:
+                e = traceback.format_exc()
                 print("[red]Ooops[/red]", e)
             else:
                 print(f"[green]Future number {futures[f]} completed![/green]")
@@ -43,7 +50,7 @@ def run_threads(max_threads: int):
     print("[green]All threads exited!")
 
 
-def run_default():
+def run_default(thread_number: int):
     sleep_choices = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     while True:
         job, lock = lock_new_job_for_running()
@@ -51,7 +58,7 @@ def run_default():
         if not job:
             choice = random.choice(sleep_choices)
             sleep(choice)
-            print("[cyan]Going to sleep:[/cyan]", choice)
+            print(f"[cyan]Worker threat {thread_number} going to sleep:[/cyan]", choice)
             if not db.new_job_exists():
                 break
             continue

@@ -1,4 +1,6 @@
 from typing import Tuple
+from rich import print
+from uuid import UUID
 from contextvars import ContextVar
 from asgiref.sync import async_to_sync
 import inspect
@@ -25,8 +27,13 @@ class Job:
         else:
             self.func_to_run(*args, **kwargs)
 
-    def run_later(self, *args, **kwargs):
-        return db.run_later(*args, job_name=self.name, **kwargs)
+    def run_later(self, *args, step_id: UUID | None = None, **kwargs) -> JobDBModel:
+        return db.run_later(*args, job_name=self.name, step_id=step_id, **kwargs)
+
+    def run_later_block(
+        self, *args, step_id: UUID | None = None, **kwargs
+    ) -> JobDBModel:
+        return db.run_later_block(*args, job_name=self.name, step_id=step_id, **kwargs)
 
 
 @dataclass
@@ -69,6 +76,9 @@ def job(*args, **kwargs):
 
 def run_job(job: JobDBModel, lock: LockedJob | None = None):
     djjp_currently_running_job.set(job)
+    if job.status != JobDBModel.Status.NEW:
+        raise ValueError("Job is not in NEW status!")
+
     db.mark_as_in_progress(job)
 
     try:
@@ -86,6 +96,7 @@ def run_job(job: JobDBModel, lock: LockedJob | None = None):
     except Exception:
         db.mark_as_error(job, traceback.format_exc())
     else:
+        db.mark_next_step_jobs_as_new(job)
         db.mark_as_done(job)
     finally:
         if lock:
@@ -97,4 +108,5 @@ def lock_new_job_for_running() -> Tuple[JobDBModel | None, LockedJob | None]:
         job, lock = db.lock_one()
         return job, lock
     except IntegrityError:
+        print("[red]Lock IntegrityError[/red]")
         return None, None
