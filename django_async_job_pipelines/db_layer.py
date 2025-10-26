@@ -1,6 +1,13 @@
 from dataclasses import dataclass
+from django.utils import timezone
+from datetime import datetime
 from uuid import UUID, uuid4
-from django_async_job_pipelines.models import JobDBModel, LockedJob, Manager
+from django_async_job_pipelines.models import (
+    JobDBModel,
+    LockedJob,
+    Manager,
+    ScheduledJob,
+)
 from django.conf import settings
 
 
@@ -71,6 +78,40 @@ class DefaultDB:
             status=JobDBModel.Status.NEW
         )
 
+    def create_or_update_schedule(
+        self, name: str, job_name: str, interval: dict, first_run_ts: datetime
+    ) -> ScheduledJob:
+        schedj, _ = ScheduledJob.objects.update_or_create(
+            name=name,
+            defaults={
+                "job_name": job_name,
+                "interval": interval,
+                "run_ts": first_run_ts,
+            },
+        )
+        return schedj
+
+    def get_all_scheduled_jobs(self):
+        return ScheduledJob.objects.all()
+
+    def delete_scheduled_job(self, sched_job: ScheduledJob):
+        sched_job.delete()
+
+    def all_scheduled_job(self):
+        return ScheduledJob.objects.all()
+
+    def update_run_ts_to_now(self, sched_job: ScheduledJob):
+        sched_job.run_ts = timezone.now()
+        sched_job.save()
+
+    def lock_job_by_id(self, job_id: UUID):
+        j = JobDBModel.objects.get(id=job_id)
+        lock = LockedJob.objects.create(job=j)
+        manager, _ = Manager.objects.get_or_create(id=manager_id)
+        j.manager = manager
+        j.save()
+        return j, lock
+
 
 @dataclass
 class CustomDB:
@@ -108,7 +149,7 @@ class CustomDB:
             return None, None
 
         lock = LockedJob.objects.using(self.name).create(job=j)
-        manager, _ = Manager.objects.get_or_create(id=manager_id)
+        manager, _ = Manager.objects.using(self.name).get_or_create(id=manager_id)
         j.manager = manager
         j.save(using=self.name)
         return j, lock
@@ -137,6 +178,41 @@ class CustomDB:
         JobDBModel.objects.using(self.name).filter(step=job.next_step).update(
             status=JobDBModel.Status.NEW
         )
+
+    def create_or_update_schedule(
+        self, name: str, job_name: str, interval: dict, first_run_ts: datetime
+    ) -> ScheduledJob:
+        # TODO: catch IntegrityError
+        sched_job, _ = ScheduledJob.objects.using(self.name).update_or_create(
+            name=name,
+            defaults={
+                "job_name": job_name,
+                "interval": interval,
+                ", run_ts": first_run_ts,
+            },
+        )
+        return sched_job
+
+    def get_all_scheduled_jobs(self):
+        return ScheduledJob.objects.using(self.name).all()
+
+    def delete_scheduled_job(self, sched_job: ScheduledJob):
+        sched_job.delete(using=self.name)
+
+    def update_run_ts_to_now(self, sched_job: ScheduledJob):
+        sched_job.run_ts = timezone.now()
+        sched_job.save(using=self.name)
+
+    def all_scheduled_job(self):
+        return ScheduledJob.objects.using(self.name).all()
+
+    def lock_job_by_id(self, job_id: UUID):
+        j = JobDBModel.objects.using(self.name).get(id=job_id)
+        lock = LockedJob.objects.using(self.name).create(job=j)
+        manager, _ = Manager.objects.using(self.name).get_or_create(id=manager_id)
+        j.manager = manager
+        j.save(using=self.name)
+        return j, lock
 
 
 @dataclass
@@ -198,6 +274,34 @@ class DB:
         if job.next_step is None:
             return
         self.implementation.mark_next_step_jobs_as_new(job)
+
+    def create_or_update_schedule(
+        self, name: str, job_name: str, interval: dict, first_run_ts: datetime
+    ) -> ScheduledJob:
+        assert self.implementation
+        return self.implementation.create_or_update_schedule(
+            name, job_name, interval, first_run_ts
+        )
+
+    def get_all_scheduled_jobs(self):
+        assert self.implementation
+        return self.implementation.get_all_scheduled_jobs()
+
+    def delete_scheduled_job(self, sched_job: ScheduledJob):
+        assert self.implementation
+        return self.implementation.delete_scheduled_job(sched_job)
+
+    def update_run_ts_to_now(self, sched_job: ScheduledJob):
+        assert self.implementation
+        self.implementation.update_run_ts_to_now(sched_job)
+
+    def all_scheduled_job(self):
+        assert self.implementation
+        return self.implementation.all_scheduled_job()
+
+    def lock_job_by_id(self, job_id: UUID):
+        assert self.implementation
+        return self.implementation.lock_job_by_id(job_id)
 
 
 conf = settings.DJJP

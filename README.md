@@ -18,9 +18,14 @@ Coming soon:
 - Remove `rich` package dependency
 - Remove `djclick` package dependency
 
-Progress on features is tracked on the [Kanban board](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
+> [!NOTE]
+> Progress on features is tracked on the [Kanban board](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
 
-Full documentation is [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki).
+> [!NOTE]
+> [Installation docs](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Installation)
+
+> [!NOTE]
+> [Usage docs](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/usage)
 
 ## How to Use
 
@@ -101,6 +106,9 @@ Then, run the command you just created:
 ```bash
 python manage.py run_consumer
 ```
+
+> [!IMPORTANT]
+> You can create chain of jobs to be run in order. See [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Usage#pipelines-or-chain-of-jobs).
 
 ## Benchmark
 
