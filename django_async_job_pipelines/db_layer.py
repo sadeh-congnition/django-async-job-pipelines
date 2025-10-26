@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 from django_async_job_pipelines.models import JobDBModel, LockedJob
 from django.conf import settings
 
@@ -10,17 +11,33 @@ class DefaultDB:
     def new_job_exists(self) -> bool:
         return JobDBModel.objects.filter(status=JobDBModel.Status.NEW).exists()
 
-    def run_later(self, *args, job_name: str, **kwargs):
+    def run_later(
+        self, *args, job_name: str, step_id: UUID | None, **kwargs
+    ) -> JobDBModel:
         return JobDBModel.objects.create(
-            name=job_name, args_and_kwargs={"args": args, "kwargs": kwargs}
+            name=job_name,
+            args_and_kwargs={"args": args, "kwargs": kwargs},
+            step=step_id,
+        )
+
+    def run_later_block(
+        self, *args, job_name: str, step_id: UUID | None, **kwargs
+    ) -> JobDBModel:
+        return JobDBModel.objects.create(
+            name=job_name,
+            args_and_kwargs={"args": args, "kwargs": kwargs},
+            status=JobDBModel.Status.BLOCKED,
+            step=step_id,
         )
 
     def lock_one(self):
-        j = JobDBModel.objects.filter(status=JobDBModel.Status.NEW).first()
+        j = JobDBModel.objects.filter(
+            status=JobDBModel.Status.NEW, lockedjob__isnull=True
+        ).first()
         if not j:
             return None, None
 
-        lock = LockedJob.objects.create(job_id=j.id)
+        lock = LockedJob.objects.create(job=j)
         return j, lock
 
     def mark_as_in_progress(self, job: JobDBModel):
@@ -39,6 +56,15 @@ class DefaultDB:
     def delete_lock(self, lock: LockedJob):
         lock.delete()
 
+    def add_next_id_to_job(self, job: JobDBModel, next_step_id: UUID):
+        job.next_step = next_step_id
+        job.save()
+
+    def mark_next_step_jobs_as_new(self, job: JobDBModel):
+        JobDBModel.objects.filter(step=job.next_step).update(
+            status=JobDBModel.Status.NEW
+        )
+
 
 @dataclass
 class CustomDB:
@@ -51,21 +77,31 @@ class CustomDB:
             .exists()
         )
 
-    def run_later(self, *args, job_name: str, **kwargs):
+    def run_later(self, *args, job_name: str, step_id: UUID | None, **kwargs):
         return JobDBModel.objects.using(self.name).create(
-            name=job_name, args_and_kwargs={"args": args, "kwargs": kwargs}
+            name=job_name,
+            args_and_kwargs={"args": args, "kwargs": kwargs},
+            step=step_id,
+        )
+
+    def run_later_block(self, *args, job_name: str, step_id: UUID | None, **kwargs):
+        return JobDBModel.objects.using(self.name).create(
+            step=step_id,
+            name=job_name,
+            args_and_kwargs={"args": args, "kwargs": kwargs},
+            status=JobDBModel.Status.BLOCKED,
         )
 
     def lock_one(self):
         j = (
             JobDBModel.objects.using(self.name)
-            .filter(status=JobDBModel.Status.NEW)
+            .filter(status=JobDBModel.Status.NEW, lockedjob__isnull=True)
             .first()
         )
         if not j:
             return None, None
 
-        lock = LockedJob.objects.using(self.name).create(job_id=j.id)
+        lock = LockedJob.objects.using(self.name).create(job=j)
         return j, lock
 
     def mark_as_in_progress(self, job: JobDBModel):
@@ -84,6 +120,15 @@ class CustomDB:
     def delete_lock(self, lock: LockedJob):
         lock.delete(using=self.name)
 
+    def add_next_id_to_job(self, job: JobDBModel, next_step_id: UUID):
+        job.next_step = next_step_id
+        job.save(using=self.name)
+
+    def mark_next_step_jobs_as_new(self, job: JobDBModel):
+        JobDBModel.objects.using(self.name).filter(step=job.next_step).update(
+            status=JobDBModel.Status.NEW
+        )
+
 
 @dataclass
 class DB:
@@ -99,9 +144,21 @@ class DB:
         assert self.implementation
         return self.implementation.new_job_exists()
 
-    def run_later(self, *args, job_name: str, **kwargs):
+    def run_later(
+        self, *args, job_name: str, step_id: UUID | None, **kwargs
+    ) -> JobDBModel:
         assert self.implementation
-        return self.implementation.run_later(*args, job_name=job_name, **kwargs)
+        return self.implementation.run_later(
+            *args, job_name=job_name, step_id=step_id, **kwargs
+        )
+
+    def run_later_block(
+        self, *args, job_name: str, step_id: UUID | None, **kwargs
+    ) -> JobDBModel:
+        assert self.implementation
+        return self.implementation.run_later_block(
+            *args, job_name=job_name, step_id=step_id, **kwargs
+        )
 
     def lock_one(self):
         assert self.implementation
@@ -122,6 +179,16 @@ class DB:
     def delete_lock(self, lock: LockedJob):
         assert self.implementation
         self.implementation.delete_lock(lock)
+
+    def add_next_id_to_job(self, job: JobDBModel, next_step_id: UUID):
+        assert self.implementation
+        self.implementation.add_next_id_to_job(job, next_step_id)
+
+    def mark_next_step_jobs_as_new(self, job: JobDBModel):
+        assert self.implementation
+        if job.next_step is None:
+            return
+        self.implementation.mark_next_step_jobs_as_new(job)
 
 
 conf = settings.DJJP

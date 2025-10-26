@@ -32,8 +32,9 @@ class MultiDBModelAdmin(admin.ModelAdmin):
 @admin.register(JobDBModel)
 class JobDBModelAdmin(MultiDBModelAdmin):
     list_display = ("id", "name", "status", "created_at", "updated_at")
+    list_filter = ["status"]
 
 
 @admin.register(LockedJob)
 class LockedJobAdmin(MultiDBModelAdmin):
-    list_display = ("job_id",)
+    list_display = ("job",)

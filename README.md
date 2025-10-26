@@ -7,21 +7,20 @@ The simplest job queue ever:
 - Run multiple consumers as separate processes
 - Configure concurrency - via multithreading - for each consumer
 - Monitor jobs via a Django admin page
-- Easily debug failed job using their exception stacktrace
+- Debug failed jobs using their error stacktrace
 
 Coming soon:
 
 - `asyncio` based concurrency
 - Pipelines as chain of jobs
-- Dedicated db as job queue (using Django's multi db support)
 - HTTP interface for the job queue
 - Scheduled jobs
 - Remove `rich` package dependency
 - Remove `djclick` package dependency
 
-The project's Kanban board is [here](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
+Progress on features is tracked on the [Kanban board](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
 
-Documentation is [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki).
+Full documentation is [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki).
 
 ## How to Use
 
@@ -31,7 +30,7 @@ Documentation is [here](https://github.com/sadeh-congnition/django-async-job-pip
 pip install https://github.com/sadeh-congnition/django-async-job-pipelines.git
 ```
 
-`pypi` package coming soon...
+A `pypi` package is coming soon once the job scheduler and `SIGHUB` signal handler are implemented.
 
 ### Setup
 
@@ -62,6 +61,8 @@ DJJP = {
 }
 ```
 
+The above is the default configuration.
+
 ### Create Background Jobs
 
 ```python
@@ -72,9 +73,12 @@ def job1(a, b):
     """
     function implementation
     """
+
+job1.run_later("a", b="b")
 ```
 
-You can change the implementation of the `job1` function even after you've pushed jobs to the queue. When the consumer runs it'll use the new implementation. If you change the function signature the job will fail.
+Jobs functions are identified by their `name` which you pass to the `job` decorator.
+So, you an change the implementation of the `job1` function even after you've pushed jobs to the queue.
 
 ### Run the Consumer
 
