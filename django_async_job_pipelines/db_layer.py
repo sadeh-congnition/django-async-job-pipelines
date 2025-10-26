@@ -1,7 +1,10 @@
 from dataclasses import dataclass
-from uuid import UUID
-from django_async_job_pipelines.models import JobDBModel, LockedJob
+from uuid import UUID, uuid4
+from django_async_job_pipelines.models import JobDBModel, LockedJob, Manager
 from django.conf import settings
+
+
+manager_id = uuid4()
 
 
 @dataclass
@@ -38,6 +41,9 @@ class DefaultDB:
             return None, None
 
         lock = LockedJob.objects.create(job=j)
+        manager, _ = Manager.objects.get_or_create(id=manager_id)
+        j.manager = manager
+        j.save()
         return j, lock
 
     def mark_as_in_progress(self, job: JobDBModel):
@@ -102,6 +108,9 @@ class CustomDB:
             return None, None
 
         lock = LockedJob.objects.using(self.name).create(job=j)
+        manager, _ = Manager.objects.get_or_create(id=manager_id)
+        j.manager = manager
+        j.save(using=self.name)
         return j, lock
 
     def mark_as_in_progress(self, job: JobDBModel):
