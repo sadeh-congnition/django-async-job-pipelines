@@ -1,4 +1,9 @@
 from django.db import models
+import uuid
+
+
+class Manager(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
 
 class JobDBModel(models.Model):
@@ -19,9 +24,15 @@ class JobDBModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     next_step = models.UUIDField(null=True, blank=True)
     step = models.UUIDField(null=True, blank=True)
+    manager = models.ForeignKey(
+        Manager, blank=True, null=True, on_delete=models.DO_NOTHING
+    )
 
     class Meta:
         db_table = "djjp_job"
+
+    def __str__(self) -> str:
+        return f"{self.id}, {self.name}, {self.status}"
 
 
 class LockedJob(models.Model):

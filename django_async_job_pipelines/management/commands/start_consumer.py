@@ -1,78 +1,34 @@
+from dataclasses import dataclass
 import djclick as click
-import traceback
-import random
-from time import sleep
 from django.conf import settings
-from rich import print
-import concurrent.futures
 
-from django_async_job_pipelines.db_layer import db
-from django_async_job_pipelines.jobs import lock_new_job_for_running, run_job
+from django_async_job_pipelines.consumers import run_threads
+
+
+@dataclass
+class Config:
+    concurrency: str = "threads"
+    concurrency_limit: int = 10
 
 
 @click.command()
 def command():
-    # TODO define default configs here!
+    default_config = Config()
     try:
         conf = settings.DJJP
-        concurrency_type = conf.get("concurrency", "threads")
+        concurrency_type = conf.get("concurrency", default_config.concurrency)
         if concurrency_type not in ("threads", "asyncio"):
             raise ValueError(
                 f"Invalid concurrency type: {concurrency_type}. Valid values are 'asyncio' and 'threads'!"
             )
-        concurrency_limit = conf.get("concurrency_limit", 10)
+        concurrency_limit = conf.get(
+            "concurrency_limit", default_config.concurrency_limit
+        )
 
         if concurrency_type == "threads":
             run_threads(int(concurrency_limit))
         else:
             raise NotImplementedError("asyncio concurrency not implemented yet!")
 
-    except AttributeError:
-        run_default()  # TODO: Fix this, it should run with default configs
-
-
-def run_threads(max_threads: int):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-        futures = {executor.submit(run_default, i): i for i in range(max_threads)}
-        # TODO: create another thread here that monitors if exist event is settings
-        # if exist event is set this threat should stop all threads
-        # and then reset all jobs to NEW status and delete the locks for all
-        # in-progress jobs
-        for f in concurrent.futures.as_completed(futures):
-            try:
-                f.result()
-            except Exception:
-                e = traceback.format_exc()
-                print("[red]Ooops[/red]", e)
-            else:
-                print(f"[green]Future number {futures[f]} completed![/green]")
-
-    print("[green]All threads exited!")
-
-
-def run_default(thread_number: int):
-    sleep_choices = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-    while True:
-        job, lock = lock_new_job_for_running()
-
-        if not job:
-            choice = random.choice(sleep_choices)
-            sleep(choice)
-            print(f"[cyan]Worker threat {thread_number} going to sleep:[/cyan]", choice)
-            if not db.new_job_exists():
-                break
-            continue
-
-        run_job(job, lock)
-
-        # this is for debugging only
-        # if not JobDBModel.objects.filter(status=JobDBModel.Status.NEW).exists():
-        #     num_in_progress_jobs = JobDBModel.objects.filter(
-        #         status=JobDBModel.Status.IN_PROGRESS
-        #     ).count()
-        #     print(
-        #         "[orange]Number of in progress jobs is [/orange]", num_in_progress_jobs
-        #     )
-        #     break
-
-    print("[yellow]No more jobs, exiting[/yellow]")
+    except AttributeError:  # config not set in `settings.py` of `django`
+        run_threads(default_config.concurrency_limit)

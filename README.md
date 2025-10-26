@@ -30,7 +30,7 @@ Full documentation is [here](https://github.com/sadeh-congnition/django-async-jo
 pip install https://github.com/sadeh-congnition/django-async-job-pipelines.git
 ```
 
-A `pypi` package is coming soon once the job scheduler and `SIGHUB` signal handler are implemented.
+A `pypi` package is coming soon once the job scheduler and `SIGINT` signal handler are implemented.
 
 ### Setup
 
