@@ -28,6 +28,7 @@ class JobDBModel(models.Model):
     manager = models.ForeignKey(
         Manager, blank=True, null=True, on_delete=models.DO_NOTHING
     )
+    timeout = models.IntegerField()
 
     class Meta:
         db_table = "djjp_job"

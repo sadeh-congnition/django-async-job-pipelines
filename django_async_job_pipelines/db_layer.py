@@ -25,19 +25,25 @@ class CustomDB:
             .exists()
         )
 
-    def run_later(self, *args, job_name: str, step_id: UUID | None, **kwargs):
+    def run_later(
+        self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs
+    ):
         return JobDBModel.objects.using(self.name).create(
             name=job_name,
             args_and_kwargs={"args": args, "kwargs": kwargs},
             step=step_id,
+            timeout=timeout,
         )
 
-    def run_later_block(self, *args, job_name: str, step_id: UUID | None, **kwargs):
+    def run_later_block(
+        self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs
+    ):
         return JobDBModel.objects.using(self.name).create(
             step=step_id,
             name=job_name,
             args_and_kwargs={"args": args, "kwargs": kwargs},
             status=JobDBModel.Status.BLOCKED,
+            timeout=timeout,
         )
 
     def get_or_create_manager(self):
@@ -93,7 +99,7 @@ class CustomDB:
             defaults={
                 "job_name": job_name,
                 "interval": interval,
-                ", run_ts": first_run_ts,
+                "run_ts": first_run_ts,
             },
         )
         return sched_job
@@ -142,19 +148,19 @@ class DB:
         return self.implementation.new_job_exists()
 
     def run_later(
-        self, *args, job_name: str, step_id: UUID | None, **kwargs
+        self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs
     ) -> JobDBModel:
         assert self.implementation
         return self.implementation.run_later(
-            *args, job_name=job_name, step_id=step_id, **kwargs
+            *args, job_name=job_name, timeout=timeout, step_id=step_id, **kwargs
         )
 
     def run_later_block(
-        self, *args, job_name: str, step_id: UUID | None, **kwargs
+        self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs
     ) -> JobDBModel:
         assert self.implementation
         return self.implementation.run_later_block(
-            *args, job_name=job_name, step_id=step_id, **kwargs
+            *args, job_name=job_name, timeout=timeout, step_id=step_id, **kwargs
         )
 
     def lock_one(self):

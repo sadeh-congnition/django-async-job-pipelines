@@ -1,6 +1,8 @@
 # djjp - django-async-job-pipelines
 
-The simplest job queue ever:
+The wait for a simple job queue is over :boom:.
+
+## Features :muscle:
 
 - No extra dependencies: use your existing db or sqlite
 - Create background jobs (`async` or regular) from any number of processes
@@ -11,7 +13,7 @@ The simplest job queue ever:
 - Pipelines as chain of jobs
 - Scheduled jobs
 
-Coming soon:
+## Coming soon :firecracker:
 
 - `pypi` package
 - `asyncio` based concurrency
@@ -75,7 +77,7 @@ The above is the default configuration.
 ```python
 from django_async_job_pipelines.jobs import job
 
-@job(name="name")  # Job names must be unique
+@job(name="name", timeout=10)  # Job names must be unique
 def job1(a, b):
     """
     function implementation
@@ -86,6 +88,8 @@ job1.run_later("a", b="b")
 
 Jobs functions are identified by their `name` which you pass to the `job` decorator.
 So, you an change the implementation of the `job1` function even after you've pushed jobs to the queue.
+
+The `timeout` is in seconds and must be provided, too. More on this [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Usage#why-timeout).
 
 ### Run the Consumer
 
