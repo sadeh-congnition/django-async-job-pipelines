@@ -7,6 +7,7 @@ from time import sleep
 from rich import print
 from django_async_job_pipelines.jobs import lock_new_job_for_running, run_job
 import concurrent.futures
+from django_async_job_pipelines.db_layer import db
 
 exit_event = threading.Event()
 
@@ -63,7 +64,8 @@ def run_default(thread_number: int):
 def run_manager_thread(name: str):
     while True:
         print("[yellow]Manager thread runing[/yellow]")
-        sleep(1)
+        db.send_manager_beat()
+        sleep(5)
         if exit_event.is_set():
             print("[red]Manager thread exiting[/red]")
             break

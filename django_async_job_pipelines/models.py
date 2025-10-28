@@ -4,6 +4,7 @@ import uuid
 
 class Manager(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 class JobDBModel(models.Model):
