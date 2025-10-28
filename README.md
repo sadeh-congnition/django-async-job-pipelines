@@ -8,19 +8,25 @@ The simplest job queue ever:
 - Configure concurrency - via multithreading - for each consumer
 - Monitor jobs via a Django admin page
 - Debug failed jobs using their error stacktrace
+- Pipelines as chain of jobs
+- Scheduled jobs
 
 Coming soon:
 
+- `pypi` package
 - `asyncio` based concurrency
-- Pipelines as chain of jobs
 - HTTP interface for the job queue
-- Scheduled jobs
 - Remove `rich` package dependency
 - Remove `djclick` package dependency
 
-Progress on features is tracked on the [Kanban board](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
+> [!NOTE]
+> Progress on features is tracked on the [Kanban board](https://github.com/orgs/sadeh-congnition/projects/2/views/1).
 
-Full documentation is [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki).
+> [!NOTE]
+> [Installation docs](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Installation)
+
+> [!NOTE]
+> [Usage docs](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/usage)
 
 ## How to Use
 
@@ -30,7 +36,7 @@ Full documentation is [here](https://github.com/sadeh-congnition/django-async-jo
 pip install https://github.com/sadeh-congnition/django-async-job-pipelines.git
 ```
 
-A `pypi` package is coming soon once the job scheduler and `SIGINT` signal handler are implemented.
+A `pypi` package is coming soon once scheduled implementation is tested and redundant dependencies are removed.
 
 ### Setup
 
@@ -57,7 +63,8 @@ Configuration is optional. In your Django `settings` module:
 DJJP = {
     "concurrency": "threads",  # ['threads', 'asyncio'] are valid values, `asyncio` not implemented yet
     "concurrency_limit": 10,  # how many jobs to run concurrently per process
-    "db_name": "default",
+    "db_name": "default",  # name of database to use as job queue
+    "scheduler_interval": 10,  # the interval in seconds for scheduler to run
 }
 ```
 
@@ -101,6 +108,9 @@ Then, run the command you just created:
 ```bash
 python manage.py run_consumer
 ```
+
+> [!IMPORTANT]
+> You can create chain of jobs to be run in order. See [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Usage#pipelines-or-chain-of-jobs).
 
 ## Benchmark
 

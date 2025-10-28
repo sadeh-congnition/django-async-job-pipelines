@@ -2,7 +2,7 @@ from django.contrib import admin
 
 
 from django_async_job_pipelines.db_layer import db
-from .models import JobDBModel, LockedJob
+from .models import JobDBModel, LockedJob, Manager, ScheduledJob
 
 
 class MultiDBModelAdmin(admin.ModelAdmin):
@@ -31,10 +31,20 @@ class MultiDBModelAdmin(admin.ModelAdmin):
 
 @admin.register(JobDBModel)
 class JobDBModelAdmin(MultiDBModelAdmin):
-    list_display = ("id", "name", "status", "created_at", "updated_at")
+    list_display = ("id", "name", "status", "manager", "created_at", "updated_at")
     list_filter = ["status"]
 
 
 @admin.register(LockedJob)
 class LockedJobAdmin(MultiDBModelAdmin):
     list_display = ("job",)
+
+
+@admin.register(Manager)
+class ManagerAdmin(MultiDBModelAdmin):
+    list_display = ("id", "updated_at")
+
+
+@admin.register(ScheduledJob)
+class ScheduledJobAdmin(MultiDBModelAdmin):
+    list_display = ("name", "job_name", "interval", "run_ts")

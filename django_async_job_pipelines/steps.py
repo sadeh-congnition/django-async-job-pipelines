@@ -1,6 +1,7 @@
 from uuid import UUID, uuid4
 
 from django_async_job_pipelines.models import JobDBModel
+from django_async_job_pipelines.jobs import Job
 from django_async_job_pipelines.db_layer import db
 
 
@@ -11,7 +12,10 @@ class Step:
         self.next_step: Step | None = None
         self.prev_step: Step | None = None
 
-    def add_job(self, job, *args, **kwargs) -> JobDBModel:
+    def add_job(self, job: Job, *args, **kwargs) -> JobDBModel:
+        if not isinstance(job, Job):
+            raise TypeError("Job must be an instance of Job!")
+
         if self.prev_step:
             j = job.run_later_block(*args, step_id=self.id, **kwargs)
             self.jobs.append(j)

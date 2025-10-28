@@ -4,6 +4,7 @@ import uuid
 
 class Manager(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 class JobDBModel(models.Model):
@@ -44,3 +45,10 @@ class LockedJob(models.Model):
     @classmethod
     def is_locked(cls, job: JobDBModel):
         return cls.objects.filter(job=job).exists()
+
+
+class ScheduledJob(models.Model):
+    name = models.CharField(max_length=255, primary_key=True)
+    job_name = models.CharField(max_length=255)
+    interval = models.JSONField()
+    run_ts = models.DateTimeField(null=True, blank=True)
