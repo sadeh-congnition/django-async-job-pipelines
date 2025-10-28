@@ -108,9 +108,6 @@ class CustomDB:
         sched_job.run_ts = timezone.now()
         sched_job.save(using=self.name)
 
-    def all_scheduled_job(self):
-        return ScheduledJob.objects.using(self.name).all()
-
     def lock_job_by_id(self, job_id: UUID):
         j = JobDBModel.objects.using(self.name).get(id=job_id)
         lock = LockedJob.objects.using(self.name).create(job=j)
@@ -209,10 +206,6 @@ class DB:
     def update_run_ts_to_now(self, sched_job: ScheduledJob):
         assert self.implementation
         self.implementation.update_run_ts_to_now(sched_job)
-
-    def all_scheduled_job(self):
-        assert self.implementation
-        return self.implementation.all_scheduled_job()
 
     def lock_job_by_id(self, job_id: UUID):
         assert self.implementation

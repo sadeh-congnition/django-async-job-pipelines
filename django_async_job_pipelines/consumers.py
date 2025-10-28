@@ -73,7 +73,10 @@ def run_scheduler_thread(name: str):
     while True:
         print("[blue]Scheduler thread runing[/blue]")
         for sched_job in get_scheduled_jobs_to_run():
-            run_scheduled_job(sched_job)
+            try:
+                run_scheduled_job(sched_job)
+            except Exception:
+                print(f"Error while running scheduled job: {traceback.format_exc()}")
         sleep(10)
         if exit_event.is_set():
             print("[red]Scheduler thread exiting[/red]")

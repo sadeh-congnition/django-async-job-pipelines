@@ -77,7 +77,7 @@ class Scheduler:
 
 
 def get_scheduled_jobs_to_run():
-    for sched_job in db.all_scheduled_job():
+    for sched_job in db.get_all_scheduled_jobs():
         seconds = sched_job.interval["seconds"]
         if sched_job.run_ts < timezone.now() - timedelta(seconds=seconds):
             yield sched_job
