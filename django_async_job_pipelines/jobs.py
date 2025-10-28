@@ -18,6 +18,7 @@ djjp_currently_running_job = ContextVar("djjp_currently_running_job")
 @dataclass
 class Job:
     name: str
+    timeout: int
     func_to_run: Callable | None = None
 
     def __call__(self, *args, **kwargs):
@@ -28,12 +29,16 @@ class Job:
             self.func_to_run(*args, **kwargs)
 
     def run_later(self, *args, step_id: UUID | None = None, **kwargs) -> JobDBModel:
-        return db.run_later(*args, job_name=self.name, step_id=step_id, **kwargs)
+        return db.run_later(
+            *args, job_name=self.name, timeout=self.timeout, step_id=step_id, **kwargs
+        )
 
     def run_later_block(
         self, *args, step_id: UUID | None = None, **kwargs
     ) -> JobDBModel:
-        return db.run_later_block(*args, job_name=self.name, step_id=step_id, **kwargs)
+        return db.run_later_block(
+            *args, job_name=self.name, timeout=self.timeout, step_id=step_id, **kwargs
+        )
 
 
 @dataclass
@@ -64,7 +69,12 @@ job_registry = Registry()
 
 
 def job(*args, **kwargs):
-    job_obj = Job(name=kwargs["name"])
+    if "name" not in kwargs:
+        raise ValueError("Job must have a name!")
+    if "timeout" not in kwargs:
+        raise ValueError("Job must have a timeout!")
+
+    job_obj = Job(name=kwargs["name"], timeout=kwargs["timeout"])
     job_registry.add(job_obj)
 
     def inner(func):
