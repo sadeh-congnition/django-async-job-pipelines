@@ -1,4 +1,3 @@
-import sys
 import threading
 import signal
 import traceback
@@ -8,16 +7,24 @@ from rich import print
 from django_async_job_pipelines.jobs import lock_new_job_for_running, run_job
 import concurrent.futures
 from django_async_job_pipelines.db_layer import db
+from django_async_job_pipelines.scheduler import (
+    get_scheduled_jobs_to_run,
+    run_scheduled_job,
+)
 
 exit_event = threading.Event()
 
 
 def run_threads(max_threads: int):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads + 1) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads + 2) as executor:
         futures = {executor.submit(run_default, i): i for i in range(max_threads)}
         futures[executor.submit(run_manager_thread, "manager_thread")] = (
             "manager_thread"
         )
+        futures[executor.submit(run_scheduler_thread, "scheduler_thread")] = (
+            "scheduler_thread"
+        )
+
         for f in concurrent.futures.as_completed(futures):
             try:
                 f.result()
@@ -25,7 +32,7 @@ def run_threads(max_threads: int):
                 e = traceback.format_exc()
                 print("[red]Ooops[/red]", e)
             else:
-                print(f"[green]Future number {futures[f]} completed![/green]")
+                print(f"[green]Future {futures[f]} completed![/green]")
 
     print("[green]All threads exited!")
 
@@ -47,15 +54,6 @@ def run_default(thread_number: int):
         run_job(job, lock)
         print(f"Ran job with id {job.id}")
 
-        # this is for debugging only
-        # if not JobDBModel.objects.filter(status=JobDBModel.Status.NEW).exists():
-        #     num_in_progress_jobs = JobDBModel.objects.filter(
-        #         status=JobDBModel.Status.IN_PROGRESS
-        #     ).count()
-        #     print(
-        #         "[orange]Number of in progress jobs is [/orange]", num_in_progress_jobs
-        #     )
-        #     break
         if exit_event.is_set():
             print(f"[red]Thread number {thread_number} exiting[/red]")
             break
@@ -70,7 +68,16 @@ def run_manager_thread(name: str):
             print("[red]Manager thread exiting[/red]")
             break
 
-    sys.exit()
+
+def run_scheduler_thread(name: str):
+    while True:
+        print("[blue]Scheduler thread runing[/blue]")
+        for sched_job in get_scheduled_jobs_to_run():
+            run_scheduled_job(sched_job)
+        sleep(10)
+        if exit_event.is_set():
+            print("[red]Scheduler thread exiting[/red]")
+            break
 
 
 def signal_handler(signum, frame):

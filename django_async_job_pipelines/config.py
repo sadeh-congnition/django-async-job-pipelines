@@ -7,6 +7,7 @@ class Config:
     concurrency: str = "threads"
     concurrency_limit: int = 10
     db_name: str = "default"
+    scheduler_interval: int = 5 * 60
 
     def __post_init__(self):
         try:
@@ -30,3 +31,6 @@ class Config:
                 f"Invalid db name: {db_name}. Valid values are {settings.DATABASES.keys()}!"
             )
         self.db_name = db_name
+
+        db_name = django_conf.get("scheduler_interval", self.scheduler_interval)
+        self.scheduler_interval = int(db_name)
