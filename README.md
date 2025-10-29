@@ -1,6 +1,6 @@
-# djjp - django-async-job-pipelines
+# :fire: djjp - django-async-job-pipelines :fire:
 
-The wait for a simple job queue is over :boom:.
+The wait for a simple job queue is :boom:
 
 ## Features :muscle:
 
@@ -67,6 +67,7 @@ DJJP = {
     "concurrency_limit": 10,  # how many jobs to run concurrently per process
     "db_name": "default",  # name of database to use as job queue
     "scheduler_interval": 10,  # the interval in seconds for scheduler to run
+    "stuck_jobs_requeue_interval": 60,  # the interval in seconds for resetting stuck jobs
 }
 ```
 

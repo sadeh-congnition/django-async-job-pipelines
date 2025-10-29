@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from django.db.models import F
 from datetime import datetime, timedelta
 from django.utils import timezone
 from uuid import UUID, uuid4
@@ -9,7 +10,7 @@ from django_async_job_pipelines.models import (
     ScheduledJob,
 )
 
-from django_async_job_pipelines.config import Config
+from django_async_job_pipelines.config import config
 
 manager_id = uuid4()
 
@@ -67,7 +68,20 @@ class CustomDB:
 
     def mark_as_in_progress(self, job: JobDBModel):
         job.status = job.Status.IN_PROGRESS
+        job.should_run_by = timezone.now() + timedelta(seconds=job.timeout)
         job.save(using=self.name)
+
+    def mark_as_new(self, job: JobDBModel, message):
+        if job.messages is None:
+            job.messages = [message.to_dict()]
+        else:
+            job.messages.append(message.to_dict())
+        job.status = job.Status.NEW
+        job.manager = None
+        job.should_run_by = None
+        job.save(using=self.name)
+
+        self.delete_job_lock(job)
 
     def mark_as_done(self, job: JobDBModel):
         job.status = job.Status.DONE
@@ -80,6 +94,9 @@ class CustomDB:
 
     def delete_lock(self, lock: LockedJob):
         lock.delete(using=self.name)
+
+    def delete_job_lock(self, job: JobDBModel):
+        return LockedJob.objects.using(self.name).filter(job=job).delete()
 
     def add_next_id_to_job(self, job: JobDBModel, next_step_id: UUID):
         job.next_step = next_step_id
@@ -133,6 +150,12 @@ class CustomDB:
     def get_stale_managers(self, cut_off_seconds: int):
         return Manager.objects.filter(
             updated_at__lt=timezone.now() - timedelta(seconds=cut_off_seconds)
+        )
+
+    def get_timed_out_jobs(self):
+        return JobDBModel.objects.using(self.name).filter(
+            status__in=[JobDBModel.Status.IN_PROGRESS],
+            should_run_by__lt=timezone.now(),
         )
 
 
@@ -233,8 +256,15 @@ class DB:
         assert self.implementation
         return self.implementation.get_stale_managers(cut_off_seconds)
 
+    def get_timed_out_jobs(self):
+        assert self.implementation
+        return self.implementation.get_timed_out_jobs()
 
-config = Config()
+    def mark_as_new(self, job: JobDBModel, message):
+        assert self.implementation
+        return self.implementation.mark_as_new(job, message)
+
+
 db = DB()
 db.create(config.db_name)
 print(f"Database name is: {config.db_name}")

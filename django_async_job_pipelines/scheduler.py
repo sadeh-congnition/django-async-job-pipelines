@@ -3,7 +3,7 @@ from django.db.utils import IntegrityError
 from datetime import timedelta
 from django.utils import timezone
 from django_async_job_pipelines.db_layer import db
-from .jobs import Job, job_registry, lock_new_job_for_running, run_job
+from .jobs import Job, job_registry, run_job
 from .models import ScheduledJob
 
 

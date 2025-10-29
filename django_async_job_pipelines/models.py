@@ -29,9 +29,12 @@ class JobDBModel(models.Model):
         Manager, blank=True, null=True, on_delete=models.DO_NOTHING
     )
     timeout = models.IntegerField()
+    should_run_by = models.DateTimeField(null=True, blank=True)
+    messages = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "djjp_job"
+        indexes = [models.Index(fields=["status"]), models.Index(fields=["step"])]
 
     def __str__(self) -> str:
         return f"{self.id}, {self.name}, {self.status}"
@@ -42,6 +45,7 @@ class LockedJob(models.Model):
 
     class Meta:
         db_table = "djjp_locked_job"
+        indexes = [models.Index(fields=["job"])]
 
     @classmethod
     def is_locked(cls, job: JobDBModel):

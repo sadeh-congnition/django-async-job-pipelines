@@ -31,7 +31,17 @@ class MultiDBModelAdmin(admin.ModelAdmin):
 
 @admin.register(JobDBModel)
 class JobDBModelAdmin(MultiDBModelAdmin):
-    list_display = ("id", "name", "status", "manager", "created_at", "updated_at")
+    list_display = (
+        "id",
+        "name",
+        "status",
+        "manager",
+        "timeout",
+        "should_run_by",
+        "messages",
+        "created_at",
+        "updated_at",
+    )
     list_filter = ["status"]
 
 
