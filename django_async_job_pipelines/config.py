@@ -5,9 +5,10 @@ from django.conf import settings
 @dataclass
 class Config:
     concurrency: str = "threads"
-    concurrency_limit: int = 10
+    concurrency_limit: int = 10  # max number of concurrent threads or `asyncio` tasks
     db_name: str = "default"
-    scheduler_interval: int = 5 * 60
+    scheduler_interval: int = 5 * 60  # seconds
+    stuck_jobs_requeue_interval: int = 60  # seconds
 
     def __post_init__(self):
         try:
@@ -32,5 +33,15 @@ class Config:
             )
         self.db_name = db_name
 
-        db_name = django_conf.get("scheduler_interval", self.scheduler_interval)
-        self.scheduler_interval = int(db_name)
+        scheduler_interval = django_conf.get(
+            "scheduler_interval", self.scheduler_interval
+        )
+        self.scheduler_interval = int(scheduler_interval)
+
+        stuck_jobs_requeue_interval = django_conf.get(
+            "stuck_jobs_requeue_interval", self.stuck_jobs_requeue_interval
+        )
+        self.stuck_jobs_requeue_interval = int(stuck_jobs_requeue_interval)
+
+
+config = Config()

@@ -85,13 +85,13 @@ def job(*args, **kwargs):
 
 
 def run_job(job: JobDBModel, lock: LockedJob | None = None):
-    djjp_currently_running_job.set(job)
-    if job.status != JobDBModel.Status.NEW:
-        raise ValueError("Job is not in NEW status!")
-
-    db.mark_as_in_progress(job)
-
     try:
+        djjp_currently_running_job.set(job)
+        if job.status != JobDBModel.Status.NEW:
+            raise ValueError("Job is not in NEW status!")
+
+        db.mark_as_in_progress(job)
+
         j = job_registry.find_job(job.name)
 
         if job.args_and_kwargs:
