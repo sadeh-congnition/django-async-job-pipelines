@@ -5,6 +5,7 @@ from django.utils import timezone
 from django_async_job_pipelines.db_layer import db
 from .jobs import Job, job_registry, run_job
 from .models import ScheduledJob
+from logging import Logger
 
 
 class Every:
@@ -89,7 +90,7 @@ def run_scheduled_job(sched_job: ScheduledJob):
     try:
         job, lock = db.lock_job_by_id(job_db_model.id)
     except IntegrityError:
-        print("[red]Lock IntegrityError while locking scheduled job![/red]")
+        logger.exception("Lock IntegrityError while locking scheduled job!")
         return
     run_job(job, lock)
     db.update_run_ts_to_now(sched_job)

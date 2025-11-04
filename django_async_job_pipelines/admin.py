@@ -42,7 +42,7 @@ class JobDBModelAdmin(MultiDBModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ["status"]
+    list_filter = ["status", "name"]
 
 
 @admin.register(LockedJob)

@@ -18,7 +18,6 @@ The wait for a simple job queue is :boom:
 - `pypi` package
 - `asyncio` based concurrency
 - HTTP interface for the job queue
-- Remove `rich` package dependency
 - Remove `djclick` package dependency
 
 > [!NOTE]
