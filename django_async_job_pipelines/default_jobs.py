@@ -1,9 +1,9 @@
 from django.utils import timezone
-from rich import print
 from datetime import datetime
 from django_async_job_pipelines.jobs import job
 from django_async_job_pipelines.db_layer import db
 from dataclasses import dataclass
+from .logger import logger
 
 
 @dataclass
@@ -27,6 +27,6 @@ class TimedOutMsg:
 
 @job(name="requeue_timed_out_jobs", timeout=60)
 def requeue_timed_out_jobs():
-    print("[orange]Requeue stuck jobs  scheduled job running[/orange]")
+    logger.debug("Requeue stuck jobs  scheduled job running")
     for j in db.get_timed_out_jobs():
         db.mark_as_new(j, TimedOutMsg(timestamp=timezone.now()))

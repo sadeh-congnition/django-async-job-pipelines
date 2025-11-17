@@ -1,5 +1,4 @@
 from typing import Tuple
-from rich import print
 from uuid import UUID
 from contextvars import ContextVar
 from asgiref.sync import async_to_sync
@@ -11,6 +10,7 @@ from typing import Callable
 
 from django_async_job_pipelines.models import JobDBModel, LockedJob
 from django_async_job_pipelines.db_layer import db
+from .logger import logger
 
 djjp_currently_running_job = ContextVar("djjp_currently_running_job")
 
@@ -84,13 +84,16 @@ def job(*args, **kwargs):
     return inner
 
 
-def run_job(job: JobDBModel, lock: LockedJob | None = None):
+def run_job(job: JobDBModel, lock: LockedJob | None = None) -> bool:
     try:
         djjp_currently_running_job.set(job)
         if job.status != JobDBModel.Status.NEW:
             raise ValueError("Job is not in NEW status!")
 
-        db.mark_as_in_progress(job)
+        res = db.mark_as_in_progress(job)
+        if not res:
+            logger.debug(f"Could not mark job as in progress: {job.id}")
+            return False
 
         j = job_registry.find_job(job.name)
 
@@ -111,6 +114,7 @@ def run_job(job: JobDBModel, lock: LockedJob | None = None):
     finally:
         if lock:
             db.delete_lock(lock)
+        return True
 
 
 def lock_new_job_for_running() -> Tuple[JobDBModel | None, LockedJob | None]:
@@ -118,5 +122,5 @@ def lock_new_job_for_running() -> Tuple[JobDBModel | None, LockedJob | None]:
         job, lock = db.lock_one()
         return job, lock
     except IntegrityError:
-        print("[red]Lock IntegrityError[/red]")
+        logger.exception("Lock IntegrityError")
         return None, None

@@ -3,7 +3,6 @@ import signal
 import traceback
 import random
 from time import sleep
-from rich import print
 from django_async_job_pipelines.jobs import lock_new_job_for_running, run_job
 import concurrent.futures
 from django_async_job_pipelines.db_layer import db
@@ -11,6 +10,7 @@ from django_async_job_pipelines.scheduler import (
     get_scheduled_jobs_to_run,
     run_scheduled_job,
 )
+from .logger import logger
 
 exit_event = threading.Event()
 
@@ -30,11 +30,11 @@ def run_threads(max_threads: int):
                 f.result()
             except Exception:
                 e = traceback.format_exc()
-                print("[red]Ooops[/red]", e)
+                logger.exception(e)
             else:
-                print(f"[green]Future {futures[f]} completed![/green]")
+                logger.info(f"Future {futures[f]} completed!")
 
-    print("[green]All threads exited!")
+    logger.info("All threads exited!")
 
 
 def run_default(thread_number: int):
@@ -45,41 +45,42 @@ def run_default(thread_number: int):
         if not job:
             choice = random.choice(sleep_choices)
             sleep(choice)
-            print(f"[cyan]Worker threat {thread_number} going to sleep:[/cyan]", choice)
+            logger.debug(f"Worker threat {thread_number} going to sleep: {choice}")
             if exit_event.is_set():
-                print(f"[red]Thread number {thread_number} exiting[/red]")
+                logger.info(f"Thread number {thread_number} exiting")
                 break
             continue
 
-        run_job(job, lock)
-        print(f"Ran job with id {job.id}")
+        res = run_job(job, lock)
+        if res:
+            logger.debug(f"Ran job with id {job.id}")
 
         if exit_event.is_set():
-            print(f"[red]Thread number {thread_number} exiting[/red]")
+            logger.info(f"Thread number {thread_number} exiting")
             break
 
 
 def run_manager_thread(name: str):
     while True:
-        print("[yellow]Manager thread runing[/yellow]")
+        logger.info("Manager thread runing")
         db.send_manager_beat()
         sleep(5)
         if exit_event.is_set():
-            print("[red]Manager thread exiting[/red]")
+            logger.info("Manager thread exiting")
             break
 
 
 def run_scheduler_thread(name: str):
     while True:
-        print("[blue]Scheduler thread runing[/blue]")
+        logger.debug("Scheduler thread runing")
         for sched_job in get_scheduled_jobs_to_run():
             try:
                 run_scheduled_job(sched_job)
             except Exception:
-                print(f"Error while running scheduled job: {traceback.format_exc()}")
+                logger.exception("Error while running scheduled job")
         sleep(10)
         if exit_event.is_set():
-            print("[red]Scheduler thread exiting[/red]")
+            logger.info("Scheduler thread exiting")
             break
 
 
