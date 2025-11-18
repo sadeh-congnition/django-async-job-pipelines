@@ -83,7 +83,9 @@ def job1(a, b):
     function implementation
     """
 
-job1.run_later("a", b="b")
+job1.run_later("a", b="b")  # Will be run by a worker process
+# or
+await job1.arun_later("a", b="b")  # Will be run by a worker process
 ```
 
 Jobs functions are identified by their `name` which you pass to the `job` decorator.

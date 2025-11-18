@@ -12,7 +12,7 @@ from django_async_job_pipelines.models import (
 )
 from django_async_job_pipelines.logger import logger
 from django_async_job_pipelines.config import config
-from django_async_job_pipelines.utils import retry_exponentially
+from django_async_job_pipelines.utils import retry_exponentially, aretry_exponentially
 
 manager_id = uuid4()
 
@@ -36,6 +36,19 @@ class CustomDB:
         self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs
     ):
         res = JobDBModel.objects.using(self.name).create(
+            name=job_name,
+            args_and_kwargs={"args": args, "kwargs": kwargs},
+            step=step_id,
+            timeout=timeout,
+        )
+        logger.debug(f"{res.id}")
+        return res
+
+    @aretry_exponentially(OperationalError)
+    async def arun_later(
+        self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs
+    ):
+        res = await JobDBModel.objects.using(self.name).acreate(
             name=job_name,
             args_and_kwargs={"args": args, "kwargs": kwargs},
             step=step_id,
@@ -219,18 +232,18 @@ class CustomDB:
     @retry_exponentially(OperationalError)
     def delete_scheduled_job(self, sched_job: ScheduledJob):
         sched_job.delete(using=self.name)
-        logger.debug(f"{sched_job.id}")
+        logger.debug(f"{sched_job.name}")
 
     @retry_exponentially(OperationalError)
     def update_run_ts_to_now(self, sched_job: ScheduledJob):
         sched_job.run_ts = timezone.now()
         sched_job.save(using=self.name, update_fields=["run_ts"])
-        logger.debug(f"{sched_job.id}")
+        logger.debug(f"{sched_job.name}")
 
     def lock_job_by_id(self, job_id: UUID):
         j = self.get_job_by_id(job_id)
         lock = self.create_lock_for_job(j)
-        manager, _ = self.get_or_create_manager()
+        manager = self.get_or_create_manager()
 
         @retry_exponentially(OperationalError)
         def save_job():
@@ -295,6 +308,15 @@ class DB:
         return self.implementation.run_later(
             *args, job_name=job_name, timeout=timeout, step_id=step_id, **kwargs
         )
+
+    async def arun_later(
+        self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs
+    ) -> JobDBModel:
+        assert self.implementation
+        res = await self.implementation.arun_later(
+            *args, job_name=job_name, timeout=timeout, step_id=step_id, **kwargs
+        )
+        return res
 
     def run_later_block(
         self, *args, job_name: str, timeout: int, step_id: UUID | None, **kwargs

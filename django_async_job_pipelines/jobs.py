@@ -33,6 +33,14 @@ class Job:
             *args, job_name=self.name, timeout=self.timeout, step_id=step_id, **kwargs
         )
 
+    async def arun_later(
+        self, *args, step_id: UUID | None = None, **kwargs
+    ) -> JobDBModel:
+        res = await db.arun_later(
+            *args, job_name=self.name, timeout=self.timeout, step_id=step_id, **kwargs
+        )
+        return res
+
     def run_later_block(
         self, *args, step_id: UUID | None = None, **kwargs
     ) -> JobDBModel:
