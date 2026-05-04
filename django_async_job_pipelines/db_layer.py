@@ -175,11 +175,11 @@ class CustomDB:
         logger.debug(f"Job {j.id} before marking as error: {j.status}")
         rows_updated = (
             JobDBModel.objects.using(self.name)
-            .filter(status=JobDBModel.Status.IN_PROGRESS)
+            .filter(id=job.id, status=JobDBModel.Status.IN_PROGRESS)
             .update(status=JobDBModel.Status.ERROR, error=error)
         )
         logger.debug(f"{job.id}: {rows_updated}")
-        if rows_updated == 1:
+        if int(rows_updated) == 1:
             return True
         return False
 

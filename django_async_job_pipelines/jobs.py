@@ -116,13 +116,14 @@ def run_job(job: JobDBModel, lock: LockedJob | None = None) -> bool:
 
     except Exception:
         db.mark_as_error(job, traceback.format_exc())
+        return False
     else:
         db.mark_next_step_jobs_as_new(job)
         db.mark_as_done(job)
+        return True
     finally:
         if lock:
             db.delete_lock(lock)
-        return True
 
 
 def lock_new_job_for_running() -> Tuple[JobDBModel | None, LockedJob | None]:

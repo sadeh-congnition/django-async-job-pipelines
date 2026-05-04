@@ -70,7 +70,8 @@ DJJP = {
 }
 ```
 
-The above is the default configuration.
+> [!NOTE]
+> The above is the default configuration.
 
 ### Create Background Jobs
 
@@ -89,13 +90,19 @@ await job1.arun_later("a", b="b")  # Will be run by a worker process
 ```
 
 Jobs functions are identified by their `name` which you pass to the `job` decorator.
-So, you an change the implementation of the `job1` function even after you've pushed jobs to the queue.
+
+> [!NOTE]
+> You an change the implementation of the `job1` function even after you've pushed jobs to the queue.
+> But, if its signature changes, the existing jobs in the queue will fail.
 
 The `timeout` is in seconds and must be provided, too. More on this [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Usage#why-timeout).
 
 ### Run the Consumer
 
-Create a [new Django management command](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/#module-django.core.management). Load your jobs modules and call the `start_consumer` command. In the below example I'm creating a command called `run_consumer` in `run_consumer.py`:
+- Create a [new Django management command](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/#module-django.core.management).
+- Load your jobs modules and call the `start_consumer` command.
+
+In the below example I'm creating a command called `run_consumer`:
 
 ```python
 from django.core.management.base import BaseCommand
@@ -116,7 +123,7 @@ python manage.py run_consumer
 ```
 
 > [!IMPORTANT]
-> You can create chain of jobs to be run in order. See [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Usage#pipelines-or-chain-of-jobs).
+> You can chain jobs to be run in order. See [here](https://github.com/sadeh-congnition/django-async-job-pipelines/wiki/Usage#pipelines-or-chain-of-jobs).
 
 ## Benchmark
 

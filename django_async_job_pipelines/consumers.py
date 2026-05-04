@@ -62,17 +62,17 @@ def run_default(thread_number: int):
 
 def run_manager_thread(name: str):
     while True:
-        logger.info("Manager thread runing")
+        logger.info(f"Manager thread running: {name}")
         db.send_manager_beat()
         sleep(5)
         if exit_event.is_set():
-            logger.info("Manager thread exiting")
+            logger.info(f"Manager thread exiting: {name}")
             break
 
 
 def run_scheduler_thread(name: str):
     while True:
-        logger.debug("Scheduler thread runing")
+        logger.debug(f"Scheduler thread running: {name}")
         for sched_job in get_scheduled_jobs_to_run():
             try:
                 run_scheduled_job(sched_job)
@@ -80,7 +80,7 @@ def run_scheduler_thread(name: str):
                 logger.exception("Error while running scheduled job")
         sleep(10)
         if exit_event.is_set():
-            logger.info("Scheduler thread exiting")
+            logger.info(f"Scheduler thread exiting: {name}")
             break
 
 
